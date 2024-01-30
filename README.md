@@ -2,4 +2,4 @@
 
 Screenshot or it didn't happen.
 
-![screenshot](https://github.com/MDNSSKNGHT/hexbox/blob/main/screenshots/20240129_17h17m04s_grim.png)
+![screenshot](https://github.com/MDNSSKNGHT/hexbox/blob/main/screenshots/20240130_00h44m41s_grim.png)
