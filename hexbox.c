@@ -7,6 +7,7 @@
 #define TB_IMPL
 
 #include "termbox.h"
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -84,10 +85,14 @@ static void draw_box(void) {
 //
 static void hex_view(struct hex_view *hexview, uint8_t *buff, uint8_t start) {
 	hexview->hexdump.draw_area = hexview->root.draw_area;
-	hexview->hexdump.draw_area.x += strlen(OFFSET_ZERO) + 1;
+	hexview->hexdump.draw_area.x += strlen(OFFSET_ZERO ":" " ");
 	hexview->hexdump.draw_area.w -= (hexview->root.draw_area.x + hexview->hexdump.draw_area.x) - 1;
 
-	int nsegments = hexview->hexdump.draw_area.w / strlen(BYTE_ZERO " ");
+	//
+	// to calculate the number of segments (bytes) to be shown in screen per line
+	// we follow this simple inequality.
+	// 0 <= <hex_dump_len> + <str_len> <= <width>
+	int nsegments = hexview->hexdump.draw_area.w / (strlen(BYTE_ZERO " ") + 1);
 
 	for (int i = 0; i < hexview->hexdump.draw_area.h - 1; i++) {
 		for (int j = 0; j < nsegments; j++) {
@@ -97,11 +102,24 @@ static void hex_view(struct hex_view *hexview, uint8_t *buff, uint8_t start) {
 		}
 	}
 
+	hexview->strings.draw_area = hexview->hexdump.draw_area;
+	hexview->strings.draw_area.x += nsegments * (strlen(BYTE_ZERO " ")) + 1;
+	hexview->strings.draw_area.w -= hexview->strings.draw_area.x;
+	for (int i = 0; i < hexview->strings.draw_area.h - 1; i++) {
+		for (int j = 0; j < nsegments; j++) {
+			uint8_t byte = buff[(i + start) * nsegments + j];
+			tb_printf(hexview->strings.draw_area.x + j, hexview->strings.draw_area.y + i,
+					0, 0, "%c", isprint(byte) ? byte : '.');
+		}
+	}
+
+	hexview->hexdump.draw_area.w -= hexview->strings.draw_area.w;
+
 	hexview->offsets.draw_area = hexview->root.draw_area;
 
 	for (int i = 0; i < hexview->offsets.draw_area.h - 1; i++) {
 		tb_printf(hexview->offsets.draw_area.x, hexview->offsets.draw_area.y + i,
-				0, 0, "0x%08x", (i + start) * nsegments);
+				0, 0, "0x%08x:", (i + start) * nsegments);
 	}
 
 	tb_present();
@@ -156,7 +174,7 @@ int main(int argc, char *argv[]) {
 	hex_view(&hexview, buff, start);
 
 	struct box cursor_limits = hexview.hexdump.draw_area;
-	cursor_limits.w -= hexview.root.draw_area.x + 1;
+	cursor_limits.w -= hexview.hexdump.draw_area.x + 1;
 	cursor_limits.h -= hexview.hexdump.draw_area.y + 1;
 
 	struct cursor_pos cpos = {0};
